@@ -57,3 +57,5 @@ rate-limiter/
     dashboards/grafana.json
   README.md
 ```
+## 📝 Design Doc
+[Rate Limiter Design](https://docs.google.com/document/d/1i_ah88lqwMl0kePaDvHtoqmIu5Zeh3Vv/edit?usp=sharing&ouid=107042604300121152772&rtpof=true&sd=true)
