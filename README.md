@@ -17,11 +17,21 @@
 
 ## 🚀 Quickstart
 ```bash
-# Run locally
+# Run locally (Uvicorn)
+uvicorn main:app --reload
+
+# Run locally (FastAPI Dev)
+cd app/
+fastapi dev main.py
+
+# Run locally (FUTURE CASE)
 docker compose up --build
 
 # Test a request
 curl -X POST "http://localhost:8000/allow?user_id=test"
+
+# Run Unit Tests
+pytest -q
 ```
 
 ## 🔧 API Spec
@@ -36,26 +46,31 @@ curl -X POST "http://localhost:8000/allow?user_id=test"
 
 ## 📂 Repo Layout
 ```
-rate-limiter/
-  app/
-    main.py
-    limiter.py
-    models.py
-    admin.py
-    config.py
-  tests/
-    test_core.py
-  deploy/
-    docker/Dockerfile
-    docker/docker-compose.yml
-    helm/Chart.yaml
-    helm/values.yaml
-    helm/templates/*.yaml
-  ops/
-    k6-smoke.js
-    dashboards/prometheus-rules.yaml
-    dashboards/grafana.json
-  README.md
+r8limiter/
+├─ app/
+│  ├─ __init__.py
+│  ├─ main.py
+│  ├─ core/
+│  │  ├─ __init__.py
+│  │  ├─ config.py
+│  │  ├─ redis_client.py
+│  │  └─ rate_limiter.py
+│  ├─ models.py
+│  └─ admin.py
+├─ tests/
+│  ├─ __init__.py
+│  └─ test_rate_limiter.py
+├─ deploy/
+│  ├─ docker/Dockerfile
+│  ├─ docker/docker-compose.yml
+│  ├─ helm/Chart.yaml
+│  ├─ helm/values.yaml
+│  └─ helm/templates/*.yaml
+├─ ops/
+│  ├─ k6-smoke.js
+│  ├─ dashboards/prometheus-rules.yaml
+│  └─ dashboards/grafana.json
+└─ README.md
 ```
 ## 📝 Design Doc
 [Rate Limiter Design](https://docs.google.com/document/d/1i_ah88lqwMl0kePaDvHtoqmIu5Zeh3Vv/edit?usp=sharing&ouid=107042604300121152772&rtpof=true&sd=true)
