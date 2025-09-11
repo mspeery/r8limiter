@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  redis:
+    image: redis:7.2
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+  api:
+    build: .
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DEFAULT_CAPACITY: 10
+      DEFAULT_REFILL_RATE_PER_SEC: 5.0
+      SUBTOKEN_SCALE: 10000
+      BUCKET_TTL_SECONDS: 3600
+      IDEMPOTENCY_TTL_SECONDS: 30
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
