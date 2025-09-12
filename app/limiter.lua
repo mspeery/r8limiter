@@ -46,9 +46,12 @@ local now_time = redis.call('TIME')
 local now_ms = (tonumber(now_time[1]) * 1000) + math.floor(tonumber(now_time[2]) / 1000)
 
 -- Load current bucket state
-local hvals = redis.call('HMGET', bucket_key, 'tokens', 'last_refill_ms')
+local hvals = redis.call('HMGET', bucket_key, 'tokens', 'last_refill_ms', 'capacity_tokens', 'rate_subtokens_per_sec', 'scale')
 local tokens = tonumber(hvals[1])
 local last_ms = tonumber(hvals[2])
+local stored_capacity = tonumber(hvals[3])
+local stored_rate = tonumber(hvals[4])
+local stored_scale = tonumber(hvals[5])
 
 local capacity_subtokens = capacity_tokens * SCALE
 local need_subtokens = cost_tokens * SCALE
@@ -96,7 +99,13 @@ else
 end
 
 -- Persist state + TTL
-redis.call('HMSET', bucket_key, 'tokens', tostring(tokens), 'last_refill_ms', tostring(last_ms))
+redis.call('HMSET', bucket_key, 
+    'tokens', tostring(tokens), 
+    'last_refill_ms', tostring(last_ms),
+    'capacity_tokens', tostring(capacity_tokens),
+    'rate_subtokens_per_sec', tostring(rate_subtokens_per_sec),
+    'scale', tostring(SCALE)
+)
 if ttl_seconds and ttl_seconds > 0 then
     redis.call('EXPIRE', bucket_key, ttl_seconds)
 end

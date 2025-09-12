@@ -15,6 +15,23 @@
 - **Observability** – Prometheus metrics, structured JSON logs
 - **Kubernetes-Ready** – Helm charts, HPA, and dashboards
 
+---
+
+## 🖼️ Architecture Overview
+
+```mermaid
+flowchart LR
+    A[Client Request] -->|POST /allow| B[FastAPI Service]
+    B -->|call Lua script| C[Redis]
+    C -->|state: tokens, last_refill_ms, capacity, rate| C
+    B -->|JSON Response| A
+    B --> D[Logs (structured JSON)]
+    B --> E[Prometheus Metrics /metrics]
+    B --> F[Admin Endpoints /admin/*]
+```
+
+---
+
 ## 🚀 Quickstart
 ```bash
 # 1) Start stack
@@ -30,27 +47,132 @@ curl -i -X POST "http://localhost:8000/allow?user_id=a&resource=pay&cost=1" \
   -H "Idempotency-Key: 12345"
 ```
 
+---
+
 ## 🔧 API Spec
-  - `POST /allow?user_id=<id>&resource=<opt>` -> `{ "allowed": bool, "remaining": int, "reset_ms": int }`
-  - `GET /admin/stats?limit=50` (top offenders, totals)
-  - `PUT /admin/policy`
+
+### 📑 Endpoints Table
+
+| Method | Path | Description |
+|--------|------|-------------|
+| **Core** |
+| `POST` | `/allow` | Spend tokens for `(user_id, resource)` (supports idempotency) |
+| **Admin** |
+| `GET` | `/admin/stats` | Global counters and top-N offenders |
+| `GET` | `/admin/user/{user_id}` | Per-user tokens + refill ETA |
+| `GET` | `/admin/resources` | Discovered resources + persisted config |
+| `GET` | `/admin/top_offenders` | Time-windowed offenders (minute/hour/day) |
+| **Observability** |
+| `GET` | `/metrics` | Prometheus metrics exposition |
+| **Health** |
+| `GET` | `/readyz` | Readiness probe (Redis + Lua healthy) |
+| `GET` | `/livez` | Liveness probe (process healthy) |
+
+---
+
+### Core
+
+#### `POST /allow`
+Tries to spend tokens for `(user_id, resource)`.
+
+**Query parameters**
+- `user_id` (string, required)
+- `resource` (string, default `"default"`)
+- `cost` (int, default `1`)
+- `idempotency` (string, optional)
+
+**Responses**
+- `200 OK`
+```json
+{"allowed": true, "retry_after": 0.0, "tokens_left": 7.4}
+```
+- `429 Too Many Requests`
+```json
+{"allowed": false, "retry_after": 0.22, "tokens_left": 0.8}
+```
+
+---
+
+### Admin
+
+#### `GET /admin/stats`
+Global totals and top offenders.
+
+#### `GET /admin/user/{user_id}`
+Per-user snapshot.
+
+#### `GET /admin/resources`
+List discovered resources with persisted configs.
+
+#### `GET /admin/top_offenders`
+Time-windowed offender aggregation.
+
+---
+
+### Observability
+
+#### `GET /metrics`
+Prometheus text exposition with:
+- `requests_total{result="allow|deny"}`
+- `active_keys`
+- `request_latency_seconds_bucket{endpoint="..."}`
+
+---
+
+### Health
+
+- `GET /readyz` → readiness (Redis + Lua OK)
+- `GET /livez` → always returns alive
+
+---
+
+### Logs
+
+All requests emit structured JSON logs.
+
+---
+
+## 📊 Grafana Dashboards (PromQL)
+
+Example PromQL queries for dashboards:
+
+- **Requests allowed vs denied**
+```promql
+sum(rate(requests_total{result="allow"}[1m])) by (result)
+```
+
+- **Active keys over time**
+```promql
+active_keys
+```
+
+- **p95 request latency (per endpoint)**
+```promql
+histogram_quantile(0.95, sum(rate(request_latency_seconds_bucket[5m])) by (le, endpoint))
+```
+
+You can import these queries into a Grafana dashboard panel for quick visibility.
+
+---
 
 ## 🎯 Goals 
-  - SLO: p99 < 10ms for in-memory
-  - < 25ms Redis
-  - correctness beats raw speed.
+- SLO: p99 < 10ms for in-memory
+- < 25ms Redis
+- correctness beats raw speed.
 
 ## 📂 Repo Layout
 ```
 r8limiter/
 ├─ app/
 │  ├─ __init__.py
+│  ├─ app_async.py
 │  ├─ limiter.lua
-│  ├─ main.py
+│  ├─ lua_limiter_async.py
 │  ├─ requirements.txt
 │  └─ settings.py
 ├─ tests/
 │  ├─ __init__.py
+│  ├─ test_integration.py
 │  └─ test_rate_limiter_redis.py
 ├─ (TBD) deploy/
 │  ├─ docker/Dockerfile
@@ -66,9 +188,9 @@ r8limiter/
 ├─ Dockerfile
 └─ README.md
 ```
+
 ## 📝 Design Doc
 [Rate Limiter Design](https://docs.google.com/document/d/1i_ah88lqwMl0kePaDvHtoqmIu5Zeh3Vv/edit?usp=sharing&ouid=107042604300121152772&rtpof=true&sd=true)
-
 
 ## 🗂 Legacy Code and Tests
 Located in the /legacy directory
@@ -88,12 +210,12 @@ uvicorn app.main:app --reload
 cd app/
 fastapi dev main.py
 
-# Run locally (FUTURE CASE)
+# Run locally (Docker Compose)
 docker compose up --build
 
 # Test a request
 curl -X POST "http://localhost:8000/allow?user_id=test"
 
-# Run Unit Tests
+# Run Unit + Integration Tests
 pytest -q
 ```
