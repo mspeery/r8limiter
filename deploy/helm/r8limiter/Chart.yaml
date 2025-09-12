@@ -1,0 +1,11 @@
+apiVersion: v2
+name: r8limiter
+description: Redis Lua token-bucket rate limiter (FastAPI) with Prometheus & Admin
+type: application
+version: 0.2.0
+appVersion: "0.2.0"
+dependencies:
+  - name: redis
+    version: 19.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

@@ -1,0 +1,123 @@
+image:
+  repository: ghcr.io/mspeery/r8limiter
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 8000
+
+probes:
+  path: /livez
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+podAnnotations: {}
+podLabels: {}
+
+# Policy ConfigMap (mounted at /config/policy.yaml)
+policy:
+  enabled: true
+  data: |
+    resources:
+      - name: read
+        capacity: 10
+        rate_tokens_per_sec: 5.0
+      - name: write
+        capacity: 5
+        rate_tokens_per_sec: 2.0
+
+env:
+  RL_CAPACITY: "10"
+  RL_RATE_TOKENS_PER_SEC: "5.0"
+  RL_SCALE: "10000"
+  RL_BUCKET_TTL_SECONDS: "3600"
+  RL_IDEM_TTL_SECONDS: "60"
+  BUCKET_KEY_FMT: "rl:{user}:{resource}"
+  OFFENDERS_ZSET: "rate:top_offenders"
+  OFFENDERS_BUCKET_PREFIX: "rate:top_offenders"
+
+# Redis: either bundled or external
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: "changeme"  # override in prod
+  master:
+    persistence:
+      enabled: false
+
+externalRedis:
+  enabled: false
+  url: ""     # e.g., redis://:password@redis-master:6379/0
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: r8limiter.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# HPA (CPU target) with optional custom metric (via prometheus-adapter)
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  cpu:
+    enabled: true
+    targetAverageUtilization: 70
+  custom:           # stretch goal (requires metrics adapter)
+    enabled: false
+    # Pods metric example (name must match adapter rules)
+    # Measures RPS per pod via Prometheus adapter: rate(requests_total[1m])
+    metricName: "requests_per_second"
+    targetAverageValue: "5"   # 5 rps per pod
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  scrapeTimeout: 5s
+  labels: {}
+
+networkPolicy:
+  enabled: false
+  ingress:
+    - from: []
+
+grafanaDashboard:
+  enabled: true
+  namespace: ""   # set to your grafana sidecar namespace if different
+  labels:
+    grafana_dashboard: "1"
