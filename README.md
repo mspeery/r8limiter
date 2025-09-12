@@ -21,13 +21,13 @@
 
 ```mermaid
 flowchart LR
-    A[Client Request] -->|POST /allow| B[FastAPI Service]
-    B -->|call Lua script| C[Redis]
-    C -->|state: tokens, last_refill_ms, capacity, rate| C
-    B -->|JSON Response| A
-    B --> D[Logs (structured JSON)]
-    B --> E[Prometheus Metrics /metrics]
-    B --> F[Admin Endpoints /admin/*]
+  client[Client] -->|POST /allow| api[FastAPI Service]
+  api -->|EVAL/EVALSHA Lua| redis[(Redis)]
+  redis -->|HMGET/HMSET state| api
+  api -->|JSON response| client
+  api --> logs[[Structured JSON Logs]]
+  api --> metrics[/Prometheus /metrics/]
+  api --> admin[/Admin /admin/*/]
 ```
 
 ---
