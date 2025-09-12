@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "r8limiter.fullname" . }}-test-connection"
+  labels:
+    {{- include "r8limiter.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: curl
+      image: curlimages/curl:8.10.1
+      args: ["-fsS", "http://{{ include "r8limiter.fullname" . }}:{{ .Values.service.port }}{{ .Values.probes.path }}"]
+  restartPolicy: Never

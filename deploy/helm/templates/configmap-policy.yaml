@@ -1,0 +1,11 @@
+{{- if .Values.policy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "r8limiter.fullname" . }}-policy
+  labels:
+    {{- include "r8limiter.labels" . | nindent 4 }}
+data:
+  policy.yaml: |
+{{ .Values.policy.data | indent 4 }}
+{{- end }}

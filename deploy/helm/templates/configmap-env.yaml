@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "r8limiter.fullname" . }}-config
+  labels:
+    {{- include "r8limiter.labels" . | nindent 4 }}
+data:
+  RL_CAPACITY: {{ .Values.env.RL_CAPACITY | quote }}
+  RL_RATE_TOKENS_PER_SEC: {{ .Values.env.RL_RATE_TOKENS_PER_SEC | quote }}
+  RL_SCALE: {{ .Values.env.RL_SCALE | quote }}
+  RL_BUCKET_TTL_SECONDS: {{ .Values.env.RL_BUCKET_TTL_SECONDS | quote }}
+  RL_IDEM_TTL_SECONDS: {{ .Values.env.RL_IDEM_TTL_SECONDS | quote }}
+  BUCKET_KEY_FMT: {{ .Values.env.BUCKET_KEY_FMT | quote }}
+  OFFENDERS_ZSET: {{ .Values.env.OFFENDERS_ZSET | quote }}
+  OFFENDERS_BUCKET_PREFIX: {{ .Values.env.OFFENDERS_BUCKET_PREFIX | quote }}

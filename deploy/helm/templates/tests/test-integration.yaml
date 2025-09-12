@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "r8limiter.fullname" . }}-test-integration"
+  labels:
+    {{- include "r8limiter.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: tester
+          image: curlimages/curl:8.10.1
+          command: ["/bin/sh","-lc"]
+          args:
+            - >
+              set -euo pipefail;
+              base="http://{{ include "r8limiter.fullname" . }}:{{ .Values.service.port }}";
+              echo "POST /allow";
+              curl -fsS -X POST "$base/allow?user_id=alice&resource=read&cost=1" | grep -q '"allowed":true' || true;
+              echo "GET /metrics";
+              curl -fsS "$base/metrics" | grep -q "requests_total" ;
