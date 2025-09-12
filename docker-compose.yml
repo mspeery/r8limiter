@@ -1,20 +1,49 @@
-version: "3.8"
+version: "3.9"
 services:
   redis:
     image: redis:7.2
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
-  api:
+    volumes:
+      - redis-data:/data
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
     build: .
     environment:
       REDIS_URL: redis://redis:6379/0
-      DEFAULT_CAPACITY: 10
-      DEFAULT_REFILL_RATE_PER_SEC: 5.0
-      SUBTOKEN_SCALE: 10000
-      BUCKET_TTL_SECONDS: 3600
-      IDEMPOTENCY_TTL_SECONDS: 30
+      RL_CAPACITY: "10"
+      RL_RATE_TOKENS_PER_SEC: "5.0"
+      RL_SCALE: "10000"
+      RL_BUCKET_TTL_SECONDS: "3600"
+      RL_IDEM_TTL_SECONDS: "60"
+      OFFENDERS_ZSET: rate:top_offenders
+      OFFENDERS_BUCKET_PREFIX: rate:top_offenders
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/readyz | jq -e '.ready == true' > /dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  tester:
+    build: .
+    command: ["pytest", "-q", "tests/test_integration.py"]
+    environment:
+      APP_URL: http://app:8000
     depends_on:
-      - redis
+      app:
+        condition: service_healthy
+
+volumes:
+  redis-data:
+
