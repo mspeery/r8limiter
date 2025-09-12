@@ -174,11 +174,11 @@ r8limiter/
 │  ├─ __init__.py
 │  ├─ test_integration.py
 │  └─ test_rate_limiter_redis.py
-├─ (TBD) deploy/
+├─ deploy/
 │  ├─ docker/Dockerfile
 │  ├─ docker/docker-compose.yml
-│  ├─ helm/Chart.yaml
-│  ├─ helm/values.yaml
+│  ├─ helm/r8limiter/Chart.yaml
+│  ├─ helm/r8limiter/values.yaml
 │  └─ helm/templates/*.yaml
 ├─ (TBD) ops/
 │  ├─ k6-smoke.js
@@ -188,6 +188,29 @@ r8limiter/
 ├─ Dockerfile
 └─ README.md
 ```
+## 🐳 Publishing to GHCR via GitHub Actions
+
+This repo includes `.github/workflows/docker-publish.yml` which builds and pushes multi-arch images to **GHCR**.
+
+**Default tags pushed**
+- `latest` (on `main`)
+- branch name (e.g., `refs/heads/feature/foo` → `feature/foo`)
+- semantic tags (e.g., `v1.2.3` → `v1.2.3`)
+- `sha-<short>`
+
+**Usage**
+1. Ensure your repo has **GitHub Packages** permission (default is fine).
+2. Push to `main` or create a tag `vX.Y.Z` — the workflow builds and pushes to:
+   - `ghcr.io/<OWNER>/r8limiter:<tags>`
+3. Update Helm values:
+```yaml
+image:
+  repository: ghcr.io/<OWNER>/r8limiter
+  tag: latest
+  pullPolicy: IfNotPresent
+```
+
+No extra secrets are needed; the workflow uses `${{ secrets.GITHUB_TOKEN }}` to authenticate to GHCR.
 
 ## 📝 Design Doc
 [Rate Limiter Design](https://docs.google.com/document/d/1i_ah88lqwMl0kePaDvHtoqmIu5Zeh3Vv/edit?usp=sharing&ouid=107042604300121152772&rtpof=true&sd=true)
