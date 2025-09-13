@@ -12,12 +12,15 @@ This chart deploys r8limiter with:
 
 ## Quickstart (kind/minikube)
 ```bash
+cd helm
 helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
 helm install r8limiter ./r8limiter   --set redis.auth.password=changeme
 ```
 
 ## Values (highlights)
-- `probes.path`: default `/healthz` (override to `/readyz` if your app does not expose `/healthz`)
+- `probes.path`: default `/livez`
 - `hpa.enabled=true` and `hpa.cpu.targetAverageUtilization=70`
 - `hpa.custom.enabled=true` requires **prometheus-adapter** exposing a `requests_per_second` pods metric
 - `serviceMonitor.enabled=true` requires **Prometheus Operator**
